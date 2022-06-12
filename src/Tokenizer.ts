@@ -75,3 +75,62 @@ const KNOWN_SINGLE_CHAR_TOKENS = new Map<
   ["}", TOKENS_GENERATOR.rightCurly],
   ["=", TOKENS_GENERATOR.assign],
 ]);
+
+export class Tokenizer {
+  private _tokens: Token[] = [];
+  private _currentIndex: number = 0;
+  private _source: string;
+  constructor(input: string) {
+    this._source = input;
+  }
+  tokenize(): Token[] {
+    while (this._currentIndex < this._source.length) {
+      let currentChar = this._source[this._currentIndex];
+      const startIndex = this._currentIndex;
+      
+      // 根据语法规则进行 token 分组
+      const isAlpha = (char: string): boolean => {
+        return (char >= "a" && char <= "z") || (char >= "A" && char <= "Z");
+      }
+      
+      // 1. 处理空格
+      if (currentChar === ' ') {
+        this._currentIndex++;
+        continue;
+      }
+      // 2. 处理字母
+      else if (isAlpha(currentChar)) {
+        let identifier = '';
+        while(isAlpha(currentChar)) {
+          identifier += currentChar;
+          this._currentIndex ++;
+          currentChar = this._source[this._currentIndex];
+        }
+        let token: Token;
+        if (identifier in TOKENS_GENERATOR) {
+          // 如果是关键字
+          token =
+              TOKENS_GENERATOR[identifier as keyof typeof TOKENS_GENERATOR](
+                startIndex
+              );
+        } else {
+          // 如果是普通标识符
+          token = TOKENS_GENERATOR["identifier"](startIndex, identifier);
+        }
+        this._tokens.push(token);
+        continue;
+      }
+      // 3. 处理单字符
+      else if(KNOWN_SINGLE_CHAR_TOKENS.has(currentChar as SingleCharTokens)) {
+        const token = KNOWN_SINGLE_CHAR_TOKENS.get(
+          currentChar as SingleCharTokens
+        )!(startIndex);
+        this._tokens.push(token);
+        this._currentIndex++;
+        continue;
+      }
+      
+    }
+    return this._tokens;
+  }
+}
